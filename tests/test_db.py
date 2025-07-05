@@ -20,3 +20,13 @@ def test_create_conta(session):
         'email': 'nebu@mail.com',
         'password': 'secret',
     }
+
+
+def test_session(session):
+    nova_conta = Conta(
+        username='nebu', email='nebu@mail.com', password='secret'
+    )
+    session.add(nova_conta)
+    session.commit()
+
+    assert session

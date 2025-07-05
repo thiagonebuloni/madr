@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class Message(BaseModel):
@@ -14,4 +14,9 @@ class ContaSchema(BaseModel):
 class ContaPublic(BaseModel):
     id: int
     username: str
-    email: str
+    email: EmailStr
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ContaList(BaseModel):
+    contas: list[ContaPublic]

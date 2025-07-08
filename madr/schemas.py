@@ -20,3 +20,8 @@ class ContaPublic(BaseModel):
 
 class ContaList(BaseModel):
     contas: list[ContaPublic]
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 from madr.app import app
 from madr.database import get_session
 from madr.models import Conta, table_registry
+from madr.security import get_password_hash
 
 
 @pytest.fixture
@@ -38,9 +39,17 @@ def session():
 
 @pytest.fixture
 def conta(session):
-    conta = Conta(username='Test', email='test@test.com', password='secret')
+    password = 'secret'
+
+    conta = Conta(
+        username='Test',
+        email='test@test.com',
+        password=get_password_hash(password),
+    )
     session.add(conta)
     session.commit()
     session.refresh(conta)
+
+    conta.clean_password = password  # type: ignore
 
     return conta

@@ -1,12 +1,18 @@
 from http import HTTPStatus
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from madr.database import get_session
 from madr.models import Conta
-from madr.schemas import ContaList, ContaPublic, ContaSchema, Message
+from madr.schemas import ContaList, ContaPublic, ContaSchema, Message, Token
+from madr.security import (
+    create_access_token,
+    get_password_hash,
+    verify_password,
+)
 
 app = FastAPI()
 
@@ -65,7 +71,9 @@ def cria_conta(conta: ContaSchema, session: Session = Depends(get_session)):
     username_sanitized = conta.username.lstrip().rstrip().strip().lower()
 
     db_conta = Conta(
-        username=username_sanitized, email=conta.email, password=conta.password
+        username=username_sanitized,
+        email=conta.email,
+        password=get_password_hash(conta.password),
     )
 
     session.add(db_conta)
@@ -111,7 +119,7 @@ def alteracao_conta(
     if (
         db_conta.username == conta.username
         and db_conta.email == conta.email
-        and db_conta.password == conta.password
+        and verify_password(conta.password, db_conta.password)
     ):
         raise HTTPException(
             status_code=HTTPStatus.CONFLICT,
@@ -120,7 +128,7 @@ def alteracao_conta(
 
     db_conta.username = conta.username
     db_conta.email = conta.email
-    db_conta.password = conta.password
+    db_conta.password = get_password_hash(conta.password)
 
     session.commit()
     session.refresh(db_conta)
@@ -141,3 +149,29 @@ def delete_conta(id: int, session: Session = Depends(get_session)):
     session.commit()
 
     return {'message': 'Conta deletada com sucesso.'}
+
+
+@app.post('/token', response_model=Token)
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: Session = Depends(get_session),
+):
+    conta = session.scalar(
+        select(Conta).where(Conta.email == form_data.username)
+    )
+
+    if not conta:
+        raise HTTPException(
+            status_code=HTTPStatus.UNAUTHORIZED,
+            detail='Email ou password incorreto.',
+        )
+
+    if not verify_password(form_data.password, conta.password):
+        raise HTTPException(
+            status_code=HTTPStatus.UNAUTHORIZED,
+            detail='Email ou password incorreto.',
+        )
+
+    access_token = create_access_token(data={'sub': conta.email})
+
+    return {'access_token': access_token, 'token_type': 'bearer'}

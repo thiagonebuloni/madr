@@ -9,7 +9,7 @@ from madr.models import Conta
 from madr.schemas import ContaList, ContaPublic, ContaSchema, Message
 from madr.security import get_password_hash, verify_password
 
-router = APIRouter(prefix='/contas', tags=['contas'])
+router = APIRouter(prefix='/conta', tags=['conta'])
 
 
 @router.get('/', status_code=HTTPStatus.OK, response_model=ContaList)
@@ -19,9 +19,7 @@ def retorna_contas(session: Session = Depends(get_session)):
     return {'contas': contas}
 
 
-@router.post(
-    '/', status_code=HTTPStatus.CREATED, response_model=ContaPublic
-)
+@router.post('/', status_code=HTTPStatus.CREATED, response_model=ContaPublic)
 def cria_conta(conta: ContaSchema, session: Session = Depends(get_session)):
     if conta.username is None:
         raise HTTPException(
@@ -126,9 +124,7 @@ def alteracao_conta(
     return db_conta
 
 
-@router.delete(
-    '/{id}', status_code=HTTPStatus.OK, response_model=Message
-)
+@router.delete('/{id}', status_code=HTTPStatus.OK, response_model=Message)
 def delete_conta(id: int, session: Session = Depends(get_session)):
     db_conta = session.scalar(select(Conta).where(Conta.id == id))
 

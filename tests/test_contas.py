@@ -21,7 +21,7 @@ def test_cria_conta_sucesso(client):
     }
 
 
-def test_cria_conta_usuario_ja_existe(conta, client):
+def test_cria_conta_usuario_ja_existe(client, conta):
     response = client.post(
         '/contas/',
         json={
@@ -35,7 +35,7 @@ def test_cria_conta_usuario_ja_existe(conta, client):
     assert response.json() == {'detail': 'Conta já existe.'}
 
 
-def test_cria_conta_email_ja_existe(conta, client):
+def test_cria_conta_email_ja_existe(client, conta):
     response = client.post(
         '/contas/',
         json={

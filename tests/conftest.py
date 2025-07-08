@@ -53,3 +53,12 @@ def conta(session):
     conta.clean_password = password  # type: ignore
 
     return conta
+
+
+def token(client, conta):
+    response = client.post(
+        '/auth/token',
+        data={'username': conta.email, 'password': conta.clean.password},
+    )
+
+    return response.json()['access_token']

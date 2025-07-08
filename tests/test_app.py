@@ -15,7 +15,7 @@ def test_app_retorna_ola_mundo():
 
 def test_get_token(client, conta):
     response = client.post(
-        '/token',
+        '/auth/token',
         data={'username': conta.email, 'password': conta.clean_password},
     )
 
@@ -28,7 +28,7 @@ def test_get_token(client, conta):
 
 def test_get_token_unauthorized_username(client, conta):
     response = client.post(
-        '/token',
+        '/auth/token',
         data={'username': conta.username, 'password': conta.clean_password},
     )
 
@@ -37,7 +37,7 @@ def test_get_token_unauthorized_username(client, conta):
 
 def test_get_token_unauthorized_password(client, conta):
     response = client.post(
-        '/token',
+        '/auth/token',
         data={'username': conta.email, 'password': conta.password},
     )
 

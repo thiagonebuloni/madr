@@ -8,6 +8,7 @@ from madr.database import get_session
 from madr.models import Conta
 from madr.schemas import ContaList, ContaPublic, ContaSchema, Message
 from madr.security import get_password_hash, verify_password
+from tests.helpers import sanitize_str
 
 router = APIRouter(prefix='/conta', tags=['conta'])
 
@@ -56,7 +57,7 @@ def cria_conta(conta: ContaSchema, session: Session = Depends(get_session)):
                 status_code=HTTPStatus.CONFLICT, detail='Conta já existe.'
             )
 
-    username_sanitized = conta.username.lstrip().rstrip().strip().lower()
+    username_sanitized = sanitize_str(conta.username)
 
     db_conta = Conta(
         username=username_sanitized,

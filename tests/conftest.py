@@ -6,7 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from madr.app import app
 from madr.database import get_session
-from madr.models import Conta, table_registry
+from madr.models import Conta, Livro, Romancista, table_registry
 from madr.security import get_password_hash
 
 
@@ -46,6 +46,7 @@ def conta(session):
         email='test@test.com',
         password=get_password_hash(password),
     )
+
     session.add(conta)
     session.commit()
     session.refresh(conta)
@@ -55,6 +56,7 @@ def conta(session):
     return conta
 
 
+@pytest.fixture
 def token(client, conta):
     response = client.post(
         '/auth/token',
@@ -62,3 +64,25 @@ def token(client, conta):
     )
 
     return response.json()['access_token']
+
+
+@pytest.fixture
+def romancista(session):
+    romancista = Romancista(nome='Hermann Hesse')
+
+    session.add(romancista)
+    session.commit()
+    session.refresh(romancista)
+
+    return romancista
+
+
+@pytest.fixture
+def livro(session):
+    livro = Livro(ano=1927, titulo='o lobo da estepe', romancista_id=1)
+
+    session.add(livro)
+    session.commit()
+    session.refresh(livro)
+
+    return livro

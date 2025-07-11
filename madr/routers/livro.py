@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import or_, select
@@ -17,12 +18,15 @@ from madr.security import get_current_conta
 
 router = APIRouter(prefix='/livro', tags=['livro'])
 
+Session = Annotated[Session, Depends(get_session)]
+CurrentConta = Annotated[Conta, Depends(get_current_conta)]
+
 
 @router.post('/', status_code=HTTPStatus.CREATED, response_model=LivroPublic)
 def cria_livro(
     livro: LivroSchema,
-    session: Session = Depends(get_session),
-    current_conta: Conta = Depends(get_current_conta),
+    session: Session,
+    current_conta: CurrentConta,
 ):
     livro.titulo = sanitize_str(livro.titulo)
 
@@ -49,7 +53,7 @@ def cria_livro(
 @router.get(
     '/{livro_id}', status_code=HTTPStatus.OK, response_model=LivroPublic
 )
-def retorna_livro(livro_id: int, session: Session = Depends(get_session)):
+def retorna_livro(livro_id: int, session: Session):
     livro = session.scalar(select(Livro).where(Livro.id == livro_id))
 
     if not livro:
@@ -63,11 +67,11 @@ def retorna_livro(livro_id: int, session: Session = Depends(get_session)):
 
 @router.get('/', status_code=HTTPStatus.OK, response_model=LivroList)
 def retorna_livro_por_nome_ano(
+    session: Session,
     livro_nome: str | None = None,
     livro_ano: int | None = None,
     limit: int = 10,
     offset: int = 0,
-    session: Session = Depends(get_session),
 ):
     if livro_nome and livro_ano:
         livros = session.scalars(
@@ -99,8 +103,8 @@ def retorna_livro_por_nome_ano(
 )
 def deleta_livro(
     livro_id: int,
-    session: Session = Depends(get_session),
-    current_conta: Conta = Depends(get_current_conta),
+    session: Session,
+    current_conta: CurrentConta,
 
 ):
     livro = session.scalar(select(Livro).where(Livro.id == livro_id))
@@ -122,8 +126,8 @@ def deleta_livro(
 def atualiza_livro(
     livro_id: int,
     livro: LivroSchema,
-    session: Session = Depends(get_session),
-    current_conta: Conta = Depends(get_current_conta),
+    session: Session,
+    current_conta: CurrentConta,
 ):
     db_livro = session.scalar(select(Livro).where(Livro.id == livro_id))
 

@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -12,16 +13,19 @@ from madr.security import get_current_conta, get_password_hash, verify_password
 
 router = APIRouter(prefix='/conta', tags=['conta'])
 
+Session = Annotated[Session, Depends(get_session)]
+CurrentConta = Annotated[Conta, Depends(get_current_conta)]
+
 
 @router.get('/', status_code=HTTPStatus.OK, response_model=ContaList)
-def retorna_contas(session: Session = Depends(get_session)):
+def retorna_contas(session: Session):
     contas = session.scalars(select(Conta))
 
     return {'contas': contas}
 
 
 @router.post('/', status_code=HTTPStatus.CREATED, response_model=ContaPublic)
-def cria_conta(conta: ContaSchema, session: Session = Depends(get_session)):
+def cria_conta(conta: ContaSchema, session: Session):
     if conta.username is None:
         raise HTTPException(
             status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
@@ -80,8 +84,8 @@ def cria_conta(conta: ContaSchema, session: Session = Depends(get_session)):
 def alteracao_conta(
     conta_id: int,
     conta: ContaSchema,
-    session: Session = Depends(get_session),
-    current_conta: Conta = Depends(get_current_conta),
+    session: Session,
+    current_conta: CurrentConta,
 ):
     if current_conta.id != conta_id:
         raise HTTPException(
@@ -126,8 +130,8 @@ def alteracao_conta(
 )
 def delete_conta(
     conta_id: int,
-    session: Session = Depends(get_session),
-    current_conta: Conta = Depends(get_current_conta),
+    session: Session,
+    current_conta: CurrentConta,
 ):
     if current_conta.id != conta_id:
         raise HTTPException(

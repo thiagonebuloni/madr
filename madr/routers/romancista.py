@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -16,6 +17,9 @@ from madr.security import get_current_conta
 
 router = APIRouter(prefix='/romancista', tags=['romancista'])
 
+Session = Annotated[Session, Depends(get_session)]
+CurrentConta = Annotated[Conta, Depends(get_current_conta)]
+
 
 @router.get(
     '/{romancista_id}',
@@ -23,7 +27,7 @@ router = APIRouter(prefix='/romancista', tags=['romancista'])
     response_model=RomancistaPublic,
 )
 def retorna_romancista(
-    romancista_id: int, session: Session = Depends(get_session)
+    romancista_id: int, session: Session
 ):
     db_romancista = session.scalar(
         select(Romancista).where(Romancista.id == romancista_id)
@@ -40,10 +44,10 @@ def retorna_romancista(
 
 @router.get('/', status_code=HTTPStatus.OK, response_model=RomancistaList)
 def retorna_romancista_por_nome(
+    session: Session,
     romancista_nome: str | None = None,
     limit: int | None = 10,
     offset: int = 0,
-    session: Session = Depends(get_session),
 ):
     romancistas = session.scalars(
         select(Romancista)
@@ -60,8 +64,8 @@ def retorna_romancista_por_nome(
 )
 def cria_romancista(
     romancista: RomancistaSchema,
-    session: Session = Depends(get_session),
-    current_conta: Conta = Depends(get_current_conta),
+    session: Session,
+    current_conta: CurrentConta,
 ):
     db_romancista = session.scalar(
         select(Romancista).where(Romancista.nome == romancista.nome)
@@ -86,8 +90,8 @@ def cria_romancista(
 )
 def deleta_romancista(
     romancista_id: int,
-    session: Session = Depends(get_session),
-    current_conta: Conta = Depends(get_current_conta),
+    session: Session,
+    current_conta: CurrentConta,
 ):
     db_romancista = session.scalar(
         select(Romancista).where(Romancista.id == romancista_id)
@@ -113,8 +117,8 @@ def deleta_romancista(
 def atualiza_romancista(
     romancista_id: int,
     romancista: RomancistaSchema,
-    session: Session = Depends(get_session),
-    current_conta: Conta = Depends(get_current_conta),
+    session: Session,
+    current_conta: CurrentConta,
 ):
     db_romancista = session.scalar(
         select(Romancista).where(Romancista.id == romancista_id)

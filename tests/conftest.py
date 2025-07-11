@@ -60,7 +60,7 @@ def conta(session):
 def token(client, conta):
     response = client.post(
         '/auth/token',
-        data={'username': conta.email, 'password': conta.clean.password},
+        data={'username': conta.email, 'password': conta.clean_password},
     )
 
     return response.json()['access_token']

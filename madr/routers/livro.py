@@ -5,20 +5,25 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from madr.database import get_session
-from madr.models import Livro
+from madr.helpers import sanitize_str
+from madr.models import Conta, Livro
 from madr.schemas import (
     LivroList,
     LivroPublic,
     LivroSchema,
     Message,
 )
-from tests.helpers import sanitize_str
+from madr.security import get_current_conta
 
 router = APIRouter(prefix='/livro', tags=['livro'])
 
 
 @router.post('/', status_code=HTTPStatus.CREATED, response_model=LivroPublic)
-def cria_livro(livro: LivroSchema, session: Session = Depends(get_session)):
+def cria_livro(
+    livro: LivroSchema,
+    session: Session = Depends(get_session),
+    current_conta: Conta = Depends(get_current_conta),
+):
     livro.titulo = sanitize_str(livro.titulo)
 
     db_livro = session.scalar(
@@ -92,7 +97,12 @@ def retorna_livro_por_nome_ano(
 @router.delete(
     '/{livro_id}', status_code=HTTPStatus.OK, response_model=Message
 )
-def deleta_livro(livro_id: int, session: Session = Depends(get_session)):
+def deleta_livro(
+    livro_id: int,
+    session: Session = Depends(get_session),
+    current_conta: Conta = Depends(get_current_conta),
+
+):
     livro = session.scalar(select(Livro).where(Livro.id == livro_id))
     if not livro:
         raise HTTPException(
@@ -110,7 +120,10 @@ def deleta_livro(livro_id: int, session: Session = Depends(get_session)):
     '/{livro_id}', status_code=HTTPStatus.OK, response_model=LivroPublic
 )
 def atualiza_livro(
-    livro_id: int, livro: LivroSchema, session: Session = Depends(get_session)
+    livro_id: int,
+    livro: LivroSchema,
+    session: Session = Depends(get_session),
+    current_conta: Conta = Depends(get_current_conta),
 ):
     db_livro = session.scalar(select(Livro).where(Livro.id == livro_id))
 

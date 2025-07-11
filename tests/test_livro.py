@@ -1,9 +1,10 @@
 from http import HTTPStatus
 
 
-def test_cria_livro(client):
+def test_cria_livro(client, token):
     response = client.post(
         '/livro',
+        headers={'Authorization': f'Bearer {token}'},
         json={'ano': 1927, 'titulo': 'O Lobo da Estepe', 'romancista_id': 1},
     )
 
@@ -16,9 +17,10 @@ def test_cria_livro(client):
     }
 
 
-def test_cria_livro_conflict(client, livro):
+def test_cria_livro_conflict(client, livro, token):
     response = client.post(
         '/livro',
+        headers={'Authorization': f'Bearer {token}'},
         json={'ano': 1927, 'titulo': 'o lobo da estepe', 'romancista_id': 1},
     )
 
@@ -66,21 +68,28 @@ def test_retorna_livros_por_nome_ano(client, livro):
     assert response.status_code == HTTPStatus.OK
 
 
-def test_deleta_livro(client, livro):
-    response = client.delete('/livro/1')
+def test_deleta_livro(client, livro, token):
+    response = client.delete(
+        '/livro/1',
+        headers={'Authorization': f'Bearer {token}'},
+    )
 
     assert response.status_code == HTTPStatus.OK
 
 
-def test_deleta_livro_not_found(client):
-    response = client.delete('/livro/1')
+def test_deleta_livro_not_found(client, token):
+    response = client.delete(
+        '/livro/1',
+        headers={'Authorization': f'Bearer {token}'},
+    )
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_atualiza_livro(client, livro):
+def test_atualiza_livro(client, livro, token):
     response = client.patch(
         '/livro/1',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'ano': 1927,
             'titulo': 'loobo da estepe',
@@ -91,9 +100,10 @@ def test_atualiza_livro(client, livro):
     assert response.status_code == HTTPStatus.OK
 
 
-def test_atualiza_livro_not_found(client):
+def test_atualiza_livro_not_found(client, token):
     response = client.patch(
         '/livro/1',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'ano': 1927,
             'titulo': 'loobo da estepe',

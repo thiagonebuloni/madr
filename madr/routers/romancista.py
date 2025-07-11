@@ -5,13 +5,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from madr.database import get_session
-from madr.models import Romancista
+from madr.models import Conta, Romancista
 from madr.schemas import (
     Message,
     RomancistaList,
     RomancistaPublic,
     RomancistaSchema,
 )
+from madr.security import get_current_conta
 
 router = APIRouter(prefix='/romancista', tags=['romancista'])
 
@@ -58,7 +59,9 @@ def retorna_romancista_por_nome(
     '/', status_code=HTTPStatus.CREATED, response_model=RomancistaPublic
 )
 def cria_romancista(
-    romancista: RomancistaSchema, session: Session = Depends(get_session)
+    romancista: RomancistaSchema,
+    session: Session = Depends(get_session),
+    current_conta: Conta = Depends(get_current_conta),
 ):
     db_romancista = session.scalar(
         select(Romancista).where(Romancista.nome == romancista.nome)
@@ -82,7 +85,9 @@ def cria_romancista(
     '/{romancista_id}', status_code=HTTPStatus.OK, response_model=Message
 )
 def deleta_romancista(
-    romancista_id: int, session: Session = Depends(get_session)
+    romancista_id: int,
+    session: Session = Depends(get_session),
+    current_conta: Conta = Depends(get_current_conta),
 ):
     db_romancista = session.scalar(
         select(Romancista).where(Romancista.id == romancista_id)
@@ -109,6 +114,7 @@ def atualiza_romancista(
     romancista_id: int,
     romancista: RomancistaSchema,
     session: Session = Depends(get_session),
+    current_conta: Conta = Depends(get_current_conta),
 ):
     db_romancista = session.scalar(
         select(Romancista).where(Romancista.id == romancista_id)

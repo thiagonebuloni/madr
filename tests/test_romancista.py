@@ -1,9 +1,10 @@
 from http import HTTPStatus
 
 
-def test_cria_romancista(client):
+def test_cria_romancista(client, token):
     response = client.post(
         '/romancista/',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'nome': 'Roberto Bolaños',
         },
@@ -13,8 +14,12 @@ def test_cria_romancista(client):
     assert response.json() == {'id': 1, 'nome': 'Roberto Bolaños'}
 
 
-def test_cria_romancista_conflict(client, romancista):
-    response = client.post('/romancista', json={'nome': 'Hermann Hesse'})
+def test_cria_romancista_conflict(client, romancista, token):
+    response = client.post(
+        '/romancista',
+        json={'nome': 'Hermann Hesse'},
+        headers={'Authorization': f'Bearer {token}'},
+    )
 
     assert response.status_code == HTTPStatus.CONFLICT
 
@@ -40,29 +45,43 @@ def test_retorna_romancista_por_nome(client, romancista):
     }
 
 
-def test_deleta_romancista(client, romancista):
-    response = client.delete('/romancista/1')
+def test_deleta_romancista(client, romancista, token):
+    response = client.delete(
+        '/romancista/1',
+        headers={'Authorization': f'Bearer {token}'},
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'Romancista deletada do MADR.'}
 
 
-def test_deleta_romancista_not_found(client):
-    response = client.delete('/romancista/1')
+def test_deleta_romancista_not_found(client, token):
+    response = client.delete(
+        '/romancista/1',
+        headers={'Authorization': f'Bearer {token}'},
+    )
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'Romancista não encontrada no MADR.'}
 
 
-def test_atualiza_romancista(client, romancista):
-    response = client.patch('/romancista/1', json={'nome': 'Hermann Hessee'})
+def test_atualiza_romancista(client, romancista, token):
+    response = client.patch(
+        '/romancista/1',
+        headers={'Authorization': f'Bearer {token}'},
+        json={'nome': 'Hermann Hessee'}
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'id': 1, 'nome': 'Hermann Hessee'}
 
 
-def test_atualiza_romancista_not_found(client):
-    response = client.patch('/romancista/1', json={'nome': 'Hermann Hessee'})
+def test_atualiza_romancista_not_found(client, token):
+    response = client.patch(
+        '/romancista/1',
+        headers={'Authorization': f'Bearer {token}'},
+        json={'nome': 'Hermann Hessee'}
+    )
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'Romancista não encontrada no MADR.'}

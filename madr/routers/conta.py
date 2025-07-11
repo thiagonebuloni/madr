@@ -5,10 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from madr.database import get_session
+from madr.helpers import sanitize_str
 from madr.models import Conta
 from madr.schemas import ContaList, ContaPublic, ContaSchema, Message
-from madr.security import get_password_hash, verify_password
-from tests.helpers import sanitize_str
+from madr.security import get_current_conta, get_password_hash, verify_password
 
 router = APIRouter(prefix='/conta', tags=['conta'])
 
@@ -78,15 +78,18 @@ def cria_conta(conta: ContaSchema, session: Session = Depends(get_session)):
     response_model=ContaPublic,
 )
 def alteracao_conta(
-    conta_id: int, conta: ContaSchema, session: Session = Depends(get_session)
+    conta_id: int,
+    conta: ContaSchema,
+    session: Session = Depends(get_session),
+    current_conta: Conta = Depends(get_current_conta),
 ):
-    if conta.username is None:
+    if current_conta.id != conta_id:
         raise HTTPException(
-            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
-            detail='Dados não podem ser nulos.',
+            status_code=HTTPStatus.FORBIDDEN,
+            detail='Sem permissões suficientes.',
         )
 
-    if conta.email is None:
+    if conta.username is None:
         raise HTTPException(
             status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
             detail='Dados não podem ser nulos.',
@@ -98,43 +101,41 @@ def alteracao_conta(
             detail='Dados não podem ser nulos.',
         )
 
-    db_conta = session.scalar(select(Conta).where(Conta.id == conta_id))
-
-    if not db_conta:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail='Usuário não encontrado'
-        )
-
     if (
-        db_conta.username == conta.username
-        and db_conta.email == conta.email
-        and verify_password(conta.password, db_conta.password)
+        current_conta.username == conta.username
+        and current_conta.email == conta.email
+        and verify_password(conta.password, current_conta.password)
     ):
         raise HTTPException(
             status_code=HTTPStatus.CONFLICT,
             detail='Os novos dados não podem ser iguais aos existentes.',
         )
 
-    db_conta.username = conta.username
-    db_conta.email = conta.email
-    db_conta.password = get_password_hash(conta.password)
+    current_conta.username = conta.username
+    current_conta.email = conta.email  # type: ignore
+    current_conta.password = get_password_hash(conta.password)
 
     session.commit()
-    session.refresh(db_conta)
+    session.refresh(current_conta)
 
-    return db_conta
+    return current_conta
 
 
-@router.delete('/{id}', status_code=HTTPStatus.OK, response_model=Message)
-def delete_conta(id: int, session: Session = Depends(get_session)):
-    db_conta = session.scalar(select(Conta).where(Conta.id == id))
-
-    if not db_conta:
+@router.delete(
+    '/{conta_id}', status_code=HTTPStatus.OK, response_model=Message
+)
+def delete_conta(
+    conta_id: int,
+    session: Session = Depends(get_session),
+    current_conta: Conta = Depends(get_current_conta),
+):
+    if current_conta.id != conta_id:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail='Conta não encontrada.'
+            status_code=HTTPStatus.FORBIDDEN,
+            detail='Sem permissões suficientes.',
         )
 
-    session.delete(db_conta)
+    session.delete(current_conta)
     session.commit()
 
     return {'message': 'Conta deletada com sucesso.'}

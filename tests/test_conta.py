@@ -70,7 +70,7 @@ def test_cria_conta_email_none(client):
         },
     )
 
-    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_CONTENT
 
 
 def test_cria_conta_password_none(client):
@@ -114,9 +114,10 @@ def test_username_is_sanitized(client):
     }
 
 
-def test_alterando_conta_sucesso(client, conta):
+def test_alterando_conta_sucesso(client, conta, token):
     response = client.put(
-        '/conta/1',
+        f'/conta/{conta.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'nebu',
             'email': 'nebu@email.com',
@@ -132,9 +133,11 @@ def test_alterando_conta_sucesso(client, conta):
     }
 
 
-def test_alterando_conta_username_none(client):
+def test_alterando_conta_username_none(client, conta, token):
+    conta.username = ''
     response = client.put(
-        '/conta/1',
+        f'/conta/{conta.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'email': 'nebu@email.com',
             'password': 'secret',
@@ -142,23 +145,31 @@ def test_alterando_conta_username_none(client):
     )
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json() == {'detail': 'Dados não podem ser nulos.'}
 
 
-def test_alterando_conta_email_none(client):
+def test_alterando_conta_email_none(client, conta, token):
+    conta.email = ''
     response = client.put(
-        '/conta/1',
+        f'/conta/{conta.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'nebu',
             'password': 'secret',
         },
     )
 
-    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {
+        'detail': 'Não foi possível validar as credenciais.'
+    }
 
 
-def test_alterando_conta_password_none(client):
+def test_alterando_conta_password_none(client, conta, token):
+    conta.password = ''
     response = client.put(
-        '/conta/1',
+        f'/conta/{conta.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'nebu',
             'email': 'nebu@email.com',
@@ -166,11 +177,13 @@ def test_alterando_conta_password_none(client):
     )
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json() == {'detail': 'Dados não podem ser nulos.'}
 
 
-def test_alterando_conta_conta_not_found(client, conta):
+def test_alterando_conta_conta_not_found(client, conta, token):
     response = client.put(
         '/conta/10',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'nebu',
             'email': 'nebu@email.com',
@@ -178,12 +191,14 @@ def test_alterando_conta_conta_not_found(client, conta):
         },
     )
 
-    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'Sem permissões suficientes.'}
 
 
-def test_alterando_conta_conta_dados_iguais(client, conta):
+def test_alterando_conta_conta_dados_iguais(client, conta, token):
     response = client.put(
-        '/conta/1',
+        f'/conta/{conta.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'Test',
             'email': 'test@test.com',
@@ -194,8 +209,29 @@ def test_alterando_conta_conta_dados_iguais(client, conta):
     assert response.status_code == HTTPStatus.CONFLICT
 
 
-def test_deleta_conta(client, conta):
-    response = client.delete('/conta/1')
+def test_alteracao_conta_decode_error(client, token):
+    token += 'b'
+    response = client.put(
+        '/conta/{conta.id}',
+        headers={'Authorization': f'Bearer {token}'},
+        json={
+            'username': 'Test',
+            'email': 'test@test.com',
+            'password': 'secret',
+        },
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {
+        'detail': 'Não foi possível validar as credenciais.'
+    }
+
+
+def test_deleta_conta(client, conta, token):
+    response = client.delete(
+        f'/conta/{conta.id}',
+        headers={'Authorization': f'Bearer {token}'},
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'Conta deletada com sucesso.'}
@@ -204,5 +240,5 @@ def test_deleta_conta(client, conta):
 def test_deleta_conta_nao_encontrada(client):
     response = client.delete('/conta/1')
 
-    assert response.status_code == HTTPStatus.NOT_FOUND
-    assert response.json() == {'detail': 'Conta não encontrada.'}
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Not authenticated'}

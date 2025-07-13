@@ -1,31 +1,44 @@
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from madr.database import get_session
 from madr.helpers import sanitize_str
 from madr.models import Conta
-from madr.schemas import ContaList, ContaPublic, ContaSchema, Message
+from madr.schemas import (
+    ContaList,
+    ContaPublic,
+    ContaSchema,
+    FilterPage,
+    Message,
+)
 from madr.security import get_current_conta, get_password_hash, verify_password
 
 router = APIRouter(prefix='/conta', tags=['conta'])
 
-Session = Annotated[Session, Depends(get_session)]
+Session = Annotated[AsyncSession, Depends(get_session)]
 CurrentConta = Annotated[Conta, Depends(get_current_conta)]
+FilterContas = Annotated[FilterPage, Query()]
 
 
 @router.get('/', status_code=HTTPStatus.OK, response_model=ContaList)
-def retorna_contas(session: Session):
-    contas = session.scalars(select(Conta))
+async def retorna_contas(
+    session: Session,  # type: ignore
+    filter_contas: FilterContas,
+):
+    query = await session.scalars(
+        select(Conta).offset(filter_contas.offset).limit(filter_contas.limit)
+    )
+    contas = query.all()
 
     return {'contas': contas}
 
 
 @router.post('/', status_code=HTTPStatus.CREATED, response_model=ContaPublic)
-def cria_conta(conta: ContaSchema, session: Session):
+async def cria_conta(conta: ContaSchema, session: Session):  # type: ignore
     if conta.username is None:
         raise HTTPException(
             status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
@@ -44,7 +57,7 @@ def cria_conta(conta: ContaSchema, session: Session):
             detail='Password não pode ser nulo',
         )
 
-    db_conta = session.scalar(
+    db_conta = await session.scalar(
         select(Conta).where(
             (Conta.username == conta.username) | (Conta.email == conta.email)
         )
@@ -70,8 +83,8 @@ def cria_conta(conta: ContaSchema, session: Session):
     )
 
     session.add(db_conta)
-    session.commit()
-    session.refresh(db_conta)
+    await session.commit()
+    await session.refresh(db_conta)
 
     return db_conta
 
@@ -81,10 +94,10 @@ def cria_conta(conta: ContaSchema, session: Session):
     status_code=HTTPStatus.OK,
     response_model=ContaPublic,
 )
-def alteracao_conta(
+async def alteracao_conta(
     conta_id: int,
     conta: ContaSchema,
-    session: Session,
+    session: Session,  # type: ignore
     current_conta: CurrentConta,
 ):
     if current_conta.id != conta_id:
@@ -119,8 +132,8 @@ def alteracao_conta(
     current_conta.email = conta.email  # type: ignore
     current_conta.password = get_password_hash(conta.password)
 
-    session.commit()
-    session.refresh(current_conta)
+    await session.commit()
+    await session.refresh(current_conta)
 
     return current_conta
 
@@ -128,9 +141,9 @@ def alteracao_conta(
 @router.delete(
     '/{conta_id}', status_code=HTTPStatus.OK, response_model=Message
 )
-def delete_conta(
+async def delete_conta(
     conta_id: int,
-    session: Session,
+    session: Session,  # type: ignore
     current_conta: CurrentConta,
 ):
     if current_conta.id != conta_id:
@@ -139,7 +152,7 @@ def delete_conta(
             detail='Sem permissões suficientes.',
         )
 
-    session.delete(current_conta)
-    session.commit()
+    await session.delete(current_conta)
+    await session.commit()
 
     return {'message': 'Conta deletada com sucesso.'}

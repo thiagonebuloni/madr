@@ -1,14 +1,15 @@
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from madr.database import get_session
 from madr.helpers import sanitize_str
 from madr.models import Conta, Livro
 from madr.schemas import (
+    LivroFilter,
     LivroList,
     LivroPublic,
     LivroSchema,
@@ -18,19 +19,20 @@ from madr.security import get_current_conta
 
 router = APIRouter(prefix='/livro', tags=['livro'])
 
-Session = Annotated[Session, Depends(get_session)]
+Session = Annotated[AsyncSession, Depends(get_session)]
 CurrentConta = Annotated[Conta, Depends(get_current_conta)]
+FilterLivros = Annotated[LivroFilter, Query()]
 
 
 @router.post('/', status_code=HTTPStatus.CREATED, response_model=LivroPublic)
-def cria_livro(
+async def cria_livro(
     livro: LivroSchema,
-    session: Session,
+    session: Session,  # type: ignore
     current_conta: CurrentConta,
 ):
     livro.titulo = sanitize_str(livro.titulo)
 
-    db_livro = session.scalar(
+    db_livro = await session.scalar(
         select(Livro).where(Livro.titulo == livro.titulo)
     )
 
@@ -44,8 +46,8 @@ def cria_livro(
     )
 
     session.add(db_livro)
-    session.commit()
-    session.refresh(db_livro)
+    await session.commit()
+    await session.refresh(db_livro)
 
     return db_livro
 
@@ -53,8 +55,8 @@ def cria_livro(
 @router.get(
     '/{livro_id}', status_code=HTTPStatus.OK, response_model=LivroPublic
 )
-def retorna_livro(livro_id: int, session: Session):
-    livro = session.scalar(select(Livro).where(Livro.id == livro_id))
+async def retorna_livro(livro_id: int, session: Session):  # type: ignore
+    livro = await session.scalar(select(Livro).where(Livro.id == livro_id))
 
     if not livro:
         raise HTTPException(
@@ -66,34 +68,38 @@ def retorna_livro(livro_id: int, session: Session):
 
 
 @router.get('/', status_code=HTTPStatus.OK, response_model=LivroList)
-def retorna_livro_por_nome_ano(
-    session: Session,
-    livro_nome: str | None = None,
-    livro_ano: int | None = None,
-    limit: int = 10,
-    offset: int = 0,
+async def retorna_livro_por_nome_ano(
+    session: Session,  # type: ignore
+    livro_filter: FilterLivros,
 ):
-    if livro_nome and livro_ano:
-        livros = session.scalars(
+    if livro_filter.titulo and livro_filter.ano:
+        query = await session.scalars(
             select(Livro)
             .where(
-                Livro.titulo.like(f'%{livro_nome}%'), Livro.ano == livro_ano
+                Livro.titulo.like(f'%{livro_filter.titulo}%'),
+                Livro.ano == livro_filter.ano,
             )
-            .offset(offset)
-            .limit(limit)
+            .offset(livro_filter.offset)
+            .limit(livro_filter.limit)
         )
-    else:
-        livros = session.scalars(
+    elif livro_filter.titulo or livro_filter.ano:
+        query = await session.scalars(
             select(Livro)
             .where(
                 or_(
-                    Livro.titulo.like(f'%{livro_nome}%'),
-                    Livro.ano == livro_ano,
+                    Livro.titulo.like(f'%{livro_filter.titulo}%'),
+                    Livro.ano == livro_filter.ano,
                 )
             )
-            .offset(offset)
-            .limit(limit)
+            .offset(livro_filter.offset)
+            .limit(livro_filter.limit)
         )
+    else:
+        query = await session.scalars(
+            select(Livro).offset(livro_filter.offset).limit(livro_filter.limit)
+        )
+
+    livros = query.all()
 
     return {'livros': livros}
 
@@ -101,21 +107,20 @@ def retorna_livro_por_nome_ano(
 @router.delete(
     '/{livro_id}', status_code=HTTPStatus.OK, response_model=Message
 )
-def deleta_livro(
+async def deleta_livro(
     livro_id: int,
-    session: Session,
+    session: Session,  # type: ignore
     current_conta: CurrentConta,
-
 ):
-    livro = session.scalar(select(Livro).where(Livro.id == livro_id))
+    livro = await session.scalar(select(Livro).where(Livro.id == livro_id))
     if not livro:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
             detail='Livro não consta no MADR.',
         )
 
-    session.delete(livro)
-    session.commit()
+    await session.delete(livro)
+    await session.commit()
 
     return {'message': 'Livro deletado do MADR.'}
 
@@ -123,13 +128,13 @@ def deleta_livro(
 @router.patch(
     '/{livro_id}', status_code=HTTPStatus.OK, response_model=LivroPublic
 )
-def atualiza_livro(
+async def atualiza_livro(
     livro_id: int,
     livro: LivroSchema,
-    session: Session,
+    session: Session,  # type: ignore
     current_conta: CurrentConta,
 ):
-    db_livro = session.scalar(select(Livro).where(Livro.id == livro_id))
+    db_livro = await session.scalar(select(Livro).where(Livro.id == livro_id))
 
     if not db_livro:
         raise HTTPException(
@@ -144,7 +149,7 @@ def atualiza_livro(
     db_livro.romancista_id = livro.romancista_id
 
     session.add(db_livro)
-    session.commit()
-    session.refresh(db_livro)
+    await session.commit()
+    await session.refresh(db_livro)
 
     return db_livro

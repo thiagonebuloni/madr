@@ -1,7 +1,6 @@
-import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from madr.app import app
@@ -10,8 +9,8 @@ from madr.models import Conta, Livro, Romancista, table_registry
 from madr.security import get_password_hash
 
 
-@pytest.fixture
-def client(session):
+@pytest_asyncio.fixture
+async def client(session):
     def get_session_override():
         return session
 
@@ -22,23 +21,26 @@ def client(session):
     app.dependency_overrides.clear()
 
 
-@pytest.fixture
-def session():
-    engine = create_engine(
-        'sqlite:///:memory:',
+@pytest_asyncio.fixture
+async def session():
+    engine = create_async_engine(
+        'sqlite+aiosqlite:///:memory:',
         connect_args={'check_same_thread': False},
         poolclass=StaticPool,
     )
-    table_registry.metadata.create_all(engine)
 
-    with Session(engine) as session:
+    async with engine.begin() as conn:
+        await conn.run_sync(table_registry.metadata.create_all)
+
+    async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
 
-    table_registry.metadata.drop_all(engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(table_registry.metadata.drop_all)
 
 
-@pytest.fixture
-def conta(session):
+@pytest_asyncio.fixture
+async def conta(session):
     password = 'secret'
 
     conta = Conta(
@@ -48,16 +50,16 @@ def conta(session):
     )
 
     session.add(conta)
-    session.commit()
-    session.refresh(conta)
+    await session.commit()
+    await session.refresh(conta)
 
     conta.clean_password = password  # type: ignore
 
     return conta
 
 
-@pytest.fixture
-def token(client, conta):
+@pytest_asyncio.fixture
+async def token(client, conta):
     response = client.post(
         '/auth/token',
         data={'username': conta.email, 'password': conta.clean_password},
@@ -66,23 +68,23 @@ def token(client, conta):
     return response.json()['access_token']
 
 
-@pytest.fixture
-def romancista(session):
+@pytest_asyncio.fixture
+async def romancista(session):
     romancista = Romancista(nome='Hermann Hesse')
 
     session.add(romancista)
-    session.commit()
-    session.refresh(romancista)
+    await session.commit()
+    await session.refresh(romancista)
 
     return romancista
 
 
-@pytest.fixture
-def livro(session):
+@pytest_asyncio.fixture
+async def livro(session):
     livro = Livro(ano=1927, titulo='o lobo da estepe', romancista_id=1)
 
     session.add(livro)
-    session.commit()
-    session.refresh(livro)
+    await session.commit()
+    await session.refresh(livro)
 
     return livro

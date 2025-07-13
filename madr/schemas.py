@@ -45,13 +45,15 @@ class LivroList(BaseModel):
 
 
 class FilterPage(BaseModel):
-    limit: int = Field(ge=0, default=0)
-    offset: int = Field(ge=0, default=10)
+    limit: int = Field(ge=0, default=10)
+    offset: int = Field(ge=0, default=0)
 
 
-class LivroFilter(FilterPage):
+class LivroFilter(BaseModel):
     titulo: str | None = Field(default=None, min_length=3, max_length=30)
     ano: int | None = None
+    limit: int = Field(ge=0, default=10)
+    offset: int = Field(ge=0, default=0)
 
 
 class RomancistaSchema(BaseModel):

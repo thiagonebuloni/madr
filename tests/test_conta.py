@@ -85,13 +85,13 @@ def test_cria_conta_password_none(client):
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
 
-def test_read_contas(client, conta):
+def test_retorna_contas(client, conta):
     response = client.get('/conta/')
 
     assert response
 
 
-def test_read_conta_with_conta(client, conta):
+def test_retorna_conta_with_conta(client, conta):
     conta_schema = ContaPublic.model_validate(conta).model_dump()
     response = client.get('/conta/')
     assert response.json() == {'contas': [conta_schema]}
@@ -235,6 +235,16 @@ def test_deleta_conta(client, conta, token):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'Conta deletada com sucesso.'}
+
+
+def test_deleta_conta_errada(client, conta, token):
+    response = client.delete(
+        '/conta/10',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'Sem permissões suficientes.'}
 
 
 def test_deleta_conta_nao_encontrada(client):

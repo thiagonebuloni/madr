@@ -69,7 +69,7 @@ def test_atualiza_romancista(client, romancista, token):
     response = client.patch(
         '/romancista/1',
         headers={'Authorization': f'Bearer {token}'},
-        json={'nome': 'Hermann Hessee'}
+        json={'nome': 'Hermann Hessee'},
     )
 
     assert response.status_code == HTTPStatus.OK
@@ -80,7 +80,7 @@ def test_atualiza_romancista_not_found(client, token):
     response = client.patch(
         '/romancista/1',
         headers={'Authorization': f'Bearer {token}'},
-        json={'nome': 'Hermann Hessee'}
+        json={'nome': 'Hermann Hessee'},
     )
 
     assert response.status_code == HTTPStatus.NOT_FOUND

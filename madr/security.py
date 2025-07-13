@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from http import HTTPStatus
+from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, HTTPException
@@ -7,25 +8,27 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt import DecodeError, decode, encode
 from pwdlib import PasswordHash
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from madr.database import get_session
 from madr.models import Conta
+from madr.settings import Settings
 
-SECRET_KEY = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
-ALGORITHM = 'HS256'
-ACCES_TOKEN_EXPIRE_MINUTES = 60
+settings = Settings()  # type: ignore
 pwd_context = PasswordHash.recommended()
+Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.now(tz=ZoneInfo('UTC')) + timedelta(
-        minutes=ACCES_TOKEN_EXPIRE_MINUTES
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
     to_encode.update({'exp': expire})
-    encoded_jwt = encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = encode(
+        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
+    )
 
     return encoded_jwt
 
@@ -41,8 +44,8 @@ def verify_password(plain_password: str, hashed_password: str):
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/auth/token')
 
 
-def get_current_conta(
-    session: Session = Depends(get_session),
+async def get_current_conta(
+    session: Session,
     token: str = Depends(oauth2_scheme),
 ):
     credentials_exception = HTTPException(
@@ -52,7 +55,9 @@ def get_current_conta(
     )
 
     try:
-        payload = decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         subject_email = payload.get('sub')
 
         if not subject_email:
@@ -61,7 +66,9 @@ def get_current_conta(
     except DecodeError:
         raise credentials_exception
 
-    conta = session.scalar(select(Conta).where(Conta.email == subject_email))
+    conta = await session.scalar(
+        select(Conta).where(Conta.email == subject_email)
+    )
 
     if not conta:
         raise credentials_exception

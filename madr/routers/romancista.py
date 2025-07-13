@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from madr.database import get_session
 from madr.models import Conta, Romancista
@@ -17,7 +17,7 @@ from madr.security import get_current_conta
 
 router = APIRouter(prefix='/romancista', tags=['romancista'])
 
-Session = Annotated[Session, Depends(get_session)]
+Session = Annotated[AsyncSession, Depends(get_session)]
 CurrentConta = Annotated[Conta, Depends(get_current_conta)]
 
 
@@ -26,10 +26,8 @@ CurrentConta = Annotated[Conta, Depends(get_current_conta)]
     status_code=HTTPStatus.OK,
     response_model=RomancistaPublic,
 )
-def retorna_romancista(
-    romancista_id: int, session: Session
-):
-    db_romancista = session.scalar(
+async def retorna_romancista(romancista_id: int, session: Session):  # type: ignore
+    db_romancista = await session.scalar(
         select(Romancista).where(Romancista.id == romancista_id)
     )
 
@@ -43,18 +41,20 @@ def retorna_romancista(
 
 
 @router.get('/', status_code=HTTPStatus.OK, response_model=RomancistaList)
-def retorna_romancista_por_nome(
-    session: Session,
+async def retorna_romancista_por_nome(
+    session: Session,  # type: ignore
     romancista_nome: str | None = None,
     limit: int | None = 10,
     offset: int = 0,
 ):
-    romancistas = session.scalars(
+    query = await session.scalars(
         select(Romancista)
         .where(Romancista.nome.like(f'%{romancista_nome}%'))
         .limit(limit)
         .offset(offset)
     )
+
+    romancistas = query.all()
 
     return {'romancistas': romancistas}
 
@@ -62,12 +62,12 @@ def retorna_romancista_por_nome(
 @router.post(
     '/', status_code=HTTPStatus.CREATED, response_model=RomancistaPublic
 )
-def cria_romancista(
+async def cria_romancista(
     romancista: RomancistaSchema,
-    session: Session,
+    session: Session,  # type: ignore
     current_conta: CurrentConta,
 ):
-    db_romancista = session.scalar(
+    db_romancista = await session.scalar(
         select(Romancista).where(Romancista.nome == romancista.nome)
     )
 
@@ -79,8 +79,8 @@ def cria_romancista(
     db_romancista = Romancista(nome=romancista.nome)
 
     session.add(db_romancista)
-    session.commit()
-    session.refresh(db_romancista)
+    await session.commit()
+    await session.refresh(db_romancista)
 
     return db_romancista
 
@@ -88,12 +88,12 @@ def cria_romancista(
 @router.delete(
     '/{romancista_id}', status_code=HTTPStatus.OK, response_model=Message
 )
-def deleta_romancista(
+async def deleta_romancista(
     romancista_id: int,
-    session: Session,
+    session: Session,  # type: ignore
     current_conta: CurrentConta,
 ):
-    db_romancista = session.scalar(
+    db_romancista = await session.scalar(
         select(Romancista).where(Romancista.id == romancista_id)
     )
 
@@ -103,8 +103,8 @@ def deleta_romancista(
             detail='Romancista não encontrada no MADR.',
         )
 
-    session.delete(db_romancista)
-    session.commit()
+    await session.delete(db_romancista)
+    await session.commit()
 
     return {'message': 'Romancista deletada do MADR.'}
 
@@ -114,13 +114,13 @@ def deleta_romancista(
     status_code=HTTPStatus.OK,
     response_model=RomancistaPublic,
 )
-def atualiza_romancista(
+async def atualiza_romancista(
     romancista_id: int,
     romancista: RomancistaSchema,
-    session: Session,
+    session: Session,  # type: ignore
     current_conta: CurrentConta,
 ):
-    db_romancista = session.scalar(
+    db_romancista = await session.scalar(
         select(Romancista).where(Romancista.id == romancista_id)
     )
 
@@ -133,7 +133,7 @@ def atualiza_romancista(
     db_romancista.nome = romancista.nome
 
     session.add(db_romancista)
-    session.commit()
-    session.refresh(db_romancista)
+    await session.commit()
+    await session.refresh(db_romancista)
 
     return db_romancista

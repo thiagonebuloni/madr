@@ -26,10 +26,32 @@ def test_get_token(client, conta):
     assert 'token_type' in token
 
 
+def test_get_token_not_conta(client):
+    response = client.post(
+        '/auth/token',
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+def test_get_token_access_token(client, conta):
+    response = client.post(
+        '/auth/token',
+        data={'username': conta.email, 'password': conta.clean_password},
+    )
+
+    token = response.json()
+
+    assert token
+    assert response.json() == token
+    assert token['access_token']
+    assert token['token_type'] == 'bearer'
+
+
 def test_get_token_unauthorized_username(client, conta):
     response = client.post(
         '/auth/token',
-        data={'username': conta.username, 'password': conta.clean_password},
+        data={'username': 'conta.username', 'password': conta.clean_password},
     )
 
     assert response.status_code == HTTPStatus.UNAUTHORIZED

@@ -180,7 +180,7 @@ def test_alterando_conta_password_none(client, conta, token):
     assert response.json() == {'detail': 'Dados não podem ser nulos.'}
 
 
-def test_alterando_conta_conta_not_found(client, conta, token):
+def test_alterando_conta_not_found(client, conta, token):
     response = client.put(
         '/conta/10',
         headers={'Authorization': f'Bearer {token}'},

@@ -19,8 +19,7 @@ pwd_context = PasswordHash.recommended()
 Session = Annotated[AsyncSession, Depends(get_session)]
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl='/auth/token',
-    refreshUrl='/auth/refresh_token'
+    tokenUrl='/auth/token', refreshUrl='/auth/refresh_token'
 )
 
 

@@ -47,12 +47,19 @@ async def retorna_romancista_por_nome(
     limit: int | None = 10,
     offset: int = 0,
 ):
-    query = await session.scalars(
-        select(Romancista)
-        .where(Romancista.nome.like(f'%{romancista_nome}%'))
-        .limit(limit)
-        .offset(offset)
-    )
+    if romancista_nome is None:
+        query = await session.scalars(
+            select(Romancista)
+            .limit(limit)
+            .offset(offset)
+        )
+    else:
+        query = await session.scalars(
+            select(Romancista)
+            .where(Romancista.nome.like(f'%{romancista_nome}%'))
+            .limit(limit)
+            .offset(offset)
+        )
 
     romancistas = query.all()
 

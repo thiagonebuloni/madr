@@ -45,6 +45,15 @@ def test_retorna_romancista_por_nome(client, romancista):
     }
 
 
+def test_retorna_romancista_sem_nome(client, romancista):
+    response = client.get('/romancista/')
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'romancistas': [{'id': 1, 'nome': 'Hermann Hesse'}]
+    }
+
+
 def test_deleta_romancista(client, romancista, token):
     response = client.delete(
         '/romancista/1',

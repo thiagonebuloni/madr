@@ -1,7 +1,5 @@
 from http import HTTPStatus
 
-from madr.schemas import ContaPublic
-
 
 def test_cria_conta_sucesso(client):
     response = client.post(
@@ -83,18 +81,6 @@ def test_cria_conta_password_none(client):
     )
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
-
-
-def test_retorna_contas(client, conta):
-    response = client.get('/conta/')
-
-    assert response
-
-
-def test_retorna_conta_with_conta(client, conta):
-    conta_schema = ContaPublic.model_validate(conta).model_dump()
-    response = client.get('/conta/')
-    assert response.json() == {'contas': [conta_schema]}
 
 
 def test_username_is_sanitized(client):

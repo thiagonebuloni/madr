@@ -46,7 +46,7 @@ def test_retorna_livro_not_found(client):
     assert response.json() == {'detail': 'Livro não consta no MADR.'}
 
 
-def test_retorna_livro_por_nome_ano(client, livro):
+def test_retorna_livro_por_nome_ano_sem_dados(client, livro):
     response = client.get('/livro/')
 
     assert response.status_code == HTTPStatus.OK
@@ -59,10 +59,9 @@ def test_retorna_livros_por_nome(client, livro):
     assert response.status_code == HTTPStatus.OK
 
 
-def test_retorna_livros_por_nome_ano(client, livro):
-    titulo_pesquisa = livro.titulo.split()[3]
+def test_retorna_livros_por_ano(client, livro):
     response = client.get(
-        f'livro/?livro_nome={titulo_pesquisa}&livro_ano=1927'
+        f'livro/?livro_ano={livro.ano}'
     )
 
     assert response.status_code == HTTPStatus.OK

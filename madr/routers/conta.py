@@ -9,7 +9,6 @@ from madr.database import get_session
 from madr.helpers import sanitize_str
 from madr.models import Conta
 from madr.schemas import (
-    ContaList,
     ContaPublic,
     ContaSchema,
     FilterPage,
@@ -22,19 +21,6 @@ router = APIRouter(prefix='/conta', tags=['conta'])
 Session = Annotated[AsyncSession, Depends(get_session)]
 CurrentConta = Annotated[Conta, Depends(get_current_conta)]
 FilterContas = Annotated[FilterPage, Query()]
-
-
-@router.get('/', status_code=HTTPStatus.OK, response_model=ContaList)
-async def retorna_contas(
-    session: Session,  # type: ignore
-    filter_contas: FilterContas,
-):
-    query = await session.scalars(
-        select(Conta).offset(filter_contas.offset).limit(filter_contas.limit)
-    )
-    contas = query.all()
-
-    return {'contas': contas}
 
 
 @router.post('/', status_code=HTTPStatus.CREATED, response_model=ContaPublic)

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from madr.database import get_session
 from madr.helpers import sanitize_str
-from madr.models import Conta, Livro
+from madr.models import Conta, Livro, Romancista
 from madr.schemas import (
     LivroFilter,
     LivroList,
@@ -39,6 +39,16 @@ async def cria_livro(
     if db_livro:
         raise HTTPException(
             status_code=HTTPStatus.CONFLICT, detail='Livro já existente.'
+        )
+
+    romancista = await session.scalar(
+        select(Romancista).where(Romancista.id == livro.romancista_id)
+    )
+
+    if not romancista:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='Romancista não consta no MADR.',
         )
 
     db_livro = Livro(

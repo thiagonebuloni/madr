@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from madr.database import get_session
+from madr.helpers import sanitize_str
 from madr.models import Conta, Romancista
 from madr.schemas import (
     Message,
@@ -49,9 +50,7 @@ async def retorna_romancista_por_nome(
 ):
     if romancista_nome is None:
         query = await session.scalars(
-            select(Romancista)
-            .limit(limit)
-            .offset(offset)
+            select(Romancista).limit(limit).offset(offset)
         )
     else:
         query = await session.scalars(
@@ -83,7 +82,8 @@ async def cria_romancista(
             status_code=HTTPStatus.CONFLICT, detail='Romancista já existe.'
         )
 
-    db_romancista = Romancista(nome=romancista.nome)
+    nome_romancista_sanitized = sanitize_str(romancista.nome)
+    db_romancista = Romancista(nome=nome_romancista_sanitized)
 
     session.add(db_romancista)
     await session.commit()
@@ -137,7 +137,7 @@ async def atualiza_romancista(
             detail='Romancista não encontrada no MADR.',
         )
 
-    db_romancista.nome = romancista.nome
+    db_romancista.nome = sanitize_str(romancista.nome)
 
     session.add(db_romancista)
     await session.commit()

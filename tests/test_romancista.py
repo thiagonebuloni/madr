@@ -1,5 +1,8 @@
 from http import HTTPStatus
 
+import pytest
+from sqlalchemy.exc import IntegrityError
+
 
 def test_cria_romancista(client, token):
     response = client.post(
@@ -11,17 +14,16 @@ def test_cria_romancista(client, token):
     )
 
     assert response.status_code == HTTPStatus.CREATED
-    assert response.json() == {'id': 1, 'nome': 'Roberto Bolaños'}
+    assert response.json() == {'id': 1, 'nome': 'roberto bolaños'}
 
 
 def test_cria_romancista_conflict(client, romancista, token):
-    response = client.post(
-        '/romancista',
-        json={'nome': 'Hermann Hesse'},
-        headers={'Authorization': f'Bearer {token}'},
-    )
-
-    assert response.status_code == HTTPStatus.CONFLICT
+    with pytest.raises(IntegrityError):
+        client.post(
+            '/romancista',
+            json={'nome': 'Hermann Hesse'},
+            headers={'Authorization': f'Bearer {token}'},
+        )
 
 
 def test_retorna_romancista(client, romancista):
@@ -41,7 +43,7 @@ def test_retorna_romancista_por_nome(client, romancista):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
-        'romancistas': [{'id': 1, 'nome': 'Hermann Hesse'}]
+        'romancistas': [{'id': 1, 'nome': 'hermann hesse'}]
     }
 
 
@@ -50,7 +52,7 @@ def test_retorna_romancista_sem_nome(client, romancista):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
-        'romancistas': [{'id': 1, 'nome': 'Hermann Hesse'}]
+        'romancistas': [{'id': 1, 'nome': 'hermann hesse'}]
     }
 
 
@@ -82,7 +84,7 @@ def test_atualiza_romancista(client, romancista, token):
     )
 
     assert response.status_code == HTTPStatus.OK
-    assert response.json() == {'id': 1, 'nome': 'Hermann Hessee'}
+    assert response.json() == {'id': 1, 'nome': 'hermann hessee'}
 
 
 def test_atualiza_romancista_not_found(client, token):

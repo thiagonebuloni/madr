@@ -72,7 +72,7 @@ async def token(client, conta):
 
 @pytest_asyncio.fixture
 async def romancista(session):
-    romancista = Romancista(nome='Hermann Hesse')
+    romancista = Romancista(nome='hermann hesse')
 
     session.add(romancista)
     await session.commit()
@@ -82,8 +82,10 @@ async def romancista(session):
 
 
 @pytest_asyncio.fixture
-async def livro(session):
-    livro = Livro(ano=1927, titulo='o lobo da estepe', romancista_id=1)
+async def livro(session, romancista):
+    livro = Livro(
+        ano=1927, titulo='o lobo da estepe', romancista_id=romancista.id
+    )
 
     session.add(livro)
     await session.commit()
